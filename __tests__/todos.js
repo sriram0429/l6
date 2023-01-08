@@ -7,6 +7,7 @@ function gettoken(res) {
   var $ = cheerio.load(res.text);
   return $("[name=_csrf]").val();
 }
+
 describe("Todo Application test", function () {
   beforeAll(async () => {
     await db.sequelize.sync({ force: true });
@@ -61,14 +62,17 @@ describe("Todo Application test", function () {
     const parsedUpdateResponse = JSON.parse(markCompleteResponse.text);
     expect(parsedUpdateResponse.completed).toBe(true);
   });
- test("marking todo as incomplete", async () => {
-    let res = await agent.get("/");
-    let Ctoken = gettoken(res);
+  
+
+  test("Marks a todo with the given ID as Incomplete", async () => {
+  
+    let res = await agent.get("/todos");
+    let csrfToken = gettoken(res);
     await agent.post("/todos").send({
       title: "Buy milk",
       dueDate: new Date().toISOString(),
       completed: false,
-      _csrf: Ctoken,
+      _csrf: csrfToken,
     });
     const groupedTodosResponse = await agent
       .get("/")
@@ -77,18 +81,19 @@ describe("Todo Application test", function () {
     const dueTodayCount = parsedGroupedResponse.duetodaytodos.length;
     const latestTodo = parsedGroupedResponse.duetodaytodos[dueTodayCount - 1];
     res = await agent.get("/");
-    Ctoken = gettoken(res);
+    csrfToken = gettoken(res);
 
     const markCompleteResponse = await agent
       .put(`/todos/${latestTodo.id}`)
       .send({
-        _csrf: Ctoken,
+        _csrf: csrfToken,
         completed: true,
       });
     const parsedUpdateResponse = JSON.parse(markCompleteResponse.text);
     expect(parsedUpdateResponse.completed).toBe(true);
- res = await agent.get("/todos");
-    csrfToken = extractCsrfToken(res);
+
+    res = await agent.get("/");
+    csrfToken = gettoken(res);
 
     const markInCompleteResponse = await agent
       .put(`/todos/${latestTodo.id}`)
